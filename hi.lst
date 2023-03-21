@@ -1,0 +1,18 @@
+     1                                  section .code
+     2                                  
+     3                                  global _start
+     4                                  
+     5                                  _start:     
+     6 00000000 B804000000                          mov eax, 0x04
+     7 00000005 BB01000000                          mov ebx, 1
+     8 0000000A B9[1F000000]                        mov ecx, Msg
+     9 0000000F BA0A000000                          mov edx,MsgLen
+    10 00000014 CD80                                int 0x80
+    11                                  
+    12 00000016 B801000000                          mov eax, 0x01
+    13 0000001B 31DB                                xor ebx, ebx
+    14 0000001D CD80                                int 0x80
+    15                                  
+    16 0000001F 5F5F486C6C77726C64-     Msg:        db "__Hllwrld", 0x0a
+    16 00000028 0A                 
+    17                                  MsgLen      equ $ - Msg
