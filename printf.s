@@ -11,26 +11,24 @@ global TimPrint
 TimPrint:   
             pop r15                 ; save ret addr
 
-            push r10 
-            push r11
-            call ConvertP           ; make all parameteres stay in stack
-            pop r11 
-            pop r10
+            call ConvertP           ; put params to stack
+                                    ; number_of_params->rax
 
-            ; push rbp
-            ; mov rbp, rsp
+            push rbp                ; prologue
+            mov rbp, rsp
 
-            ; ; push r9
-            ; ; push r8
-            ; ; push cx            
-            ; ; push rdx
-            ; ; push rsi
-            ; ; push rdi
+            mov rcx, rax            ; set counter!
 
-            ; ; sub rsp,                ; shift stackpointer down
+            mov rbx, 8
+            imul rbx
+            add rsp, rax            ; point rsp to first parameter
 
-            ; pop rbp
-
+next_param:                         ; while(rsp!=rbp){pop rax; switch rax}
+            sub rsp, 8              
+            loop next_param
+            
+            pop rbp                  
+            
             push r15
             ret
 ;------------------------------------------------
@@ -39,14 +37,9 @@ TimPrint:
 ; Push remainder of params from registers
 ;-----------------------------------------------
 ConvertP:
-            pop r11                 ; save retaddr
+            pop r14                 ; save retaddr
             
-            push r10 
-            push r11
-            call CalcP
-            pop r11 
-            pop r10
-
+            call CalcP              ; -> rax = number of params
             jmp [jmp_tab_params + rax*8]
 
 zero_params:
@@ -82,7 +75,8 @@ five_params:
             push rsi
             jmp finish_1
 	
-finish_1:   push r11                ; revive retaddr
+finish_1:   
+            push r14                ; revive retaddr
             ret
 ;------------------------------------------------
 
@@ -91,30 +85,31 @@ finish_1:   push r11                ; revive retaddr
 ;   returns value from 1 to 5
 ;------------------------------------------------
 CalcP:
-            ; mov r10, rdi           ; use r10 as a ptr to string
-            mov rax, 0             ; use rax as a counter
-            xor r10, r10
+            push rbx                    ; use as a relative to rdi mem_shift
+            mov rax, 0                  ; use rax as a counter
+            mov rbx, 0 
 
 calcp_next: 
-            cmp byte [rdi+r10*1] , 0
+            cmp byte [rdi+rbx*1] , 0
             je finish
 
-            cmp byte [rdi+r10*1], '%'
+            cmp byte [rdi+rbx*1], '%'
             je percent
 
-            inc r10
+            inc rbx
             jmp calcp_next
 
 percent:    
-            inc r10
-            cmp byte [rdi+r10*1], '%'    ; check for second '%'
+            inc rbx
+            cmp byte [rdi+rbx*1], '%'   ; check for second '%'
             je calcp_next
-            inc rax                ; increament counter
+            inc rax                     ; increament counter
             cmp rax, 5
             jae finish
             jmp calcp_next
 
-finish:
+finish:     
+            pop rbx
             ret 
 ;------------------------------------------------
 
