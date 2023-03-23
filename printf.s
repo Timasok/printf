@@ -17,15 +17,18 @@ TimPrint:
             push rbp                ; prologue
             mov rbp, rsp
 
-            mov rcx, rax            ; set counter!
+            ; mov rcx, rax            ; set counter!
 
             mov rbx, 8
             imul rbx
             add rsp, rax            ; point rsp to first parameter
 
 next_param:                         ; while(rsp!=rbp){pop rax; switch rax}
-            sub rsp, 8              
-            loop next_param
+            sub rsp, 8            
+
+            cmp rsp, rbp
+            jne next_param
+            ; loop next_param
             
             pop rbp                  
             
