@@ -8,7 +8,7 @@ int main()
     int year = 1999;
 
     TimPrint("My name is %s, its %d", line, year);
-    printf("My name is %s, shit %d", line, year);
+    // printf("My name is %s, shit %d", line, year);
 
     // puts("Otoydi!");
 

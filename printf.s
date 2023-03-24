@@ -17,7 +17,7 @@ TimPrint:
             push rbp                ; prologue
             mov rbp, rsp
 
-            ; mov rcx, rax          ; set counter!
+            mov rcx, rax          ; set counter!
 
             ; mov rbx, 8            ; jump to the start of parameters in stack
             ; imul rbx
@@ -30,7 +30,7 @@ display_buffer:
             mov rax, 0x01
             mov rdi, 1              ; stdout 
             mov rsi, Print_buf
-            ; mov rdx, MsgLen
+            ; sub rdx, Print_buf-rsi  ; rdx = buffer_length
             syscall
 
             pop rbp                 ; epilogue
@@ -42,21 +42,76 @@ display_buffer:
 ;------------------------------------------------
 ;Function that saves every symbol to Print_buf
 ;Entry:     
-;Exit:      rdx = buffer_length
+;Exit:
 ;Expects:   
 ;Destroys:  
 ;------------------------------------------------
 FormBuffer:
 
-            mov rdx, 10
 ; next_param:                         ; while(rsp!=rbp){pop rax; switch rax}
 ;             sub rsp, 8            
 ;             cmp rsp, rbp
 ;             jne next_param
+                                      ; rcx stands for remainding arguments
+            xor rbx, rbx              ; set initial shift in format buffer
+            mov rsi, Print_buf        ; set symbol start
+
+next:      jmp CheckSymbol
+
+put_sym:
+           jmp SendSymbol
+
+put_spec:
+           jmp HandleSpec 
+
+form_buf_finish:
 
             jmp end_form_buf
 ;------------------------------------------------
 
+;------------------------------------------------
+;Function that checks symbol
+;Entry:     
+;Exit:      rdx = buffer_length
+;Expects:   
+;Destroys:  
+;------------------------------------------------
+CheckSymbol:
+
+            cmp byte [rdi+rbx*1], term     ;TODO do we need to incerement here?
+            je form_buf_finish
+
+            cmp byte [rdi+rbx*1], spec
+            je put_spec
+
+            jmp put_sym
+;------------------------------------------------
+
+;------------------------------------------------
+;Sends symbol to Print_buf
+;------------------------------------------------
+SendSymbol:
+            mov byte al,[rdi+rbx]          ; get from format
+            inc rbx
+
+            mov byte [rsi+rdx], al          ; send to buffer
+            inc rdx
+
+            jmp next
+;------------------------------------------------
+
+;------------------------------------------------
+;Handles % logic
+;------------------------------------------------
+HandleSpec:
+            mov byte al, [rdi+rbx]          ; get from format
+            inc rbx
+
+            mov byte [rsi+rdx], al          ; send to buffer
+            inc rdx
+
+            jmp next
+;------------------------------------------------
 
 ;------------------------------------------------
 ; Push remainder of params from registers
@@ -118,7 +173,7 @@ calcp_next:
             cmp byte [rdi+rbx*1] , 0
             je finish
 
-            cmp byte [rdi+rbx*1], '%'
+            cmp byte [rdi+rbx*1], spec
             je percent
 
             inc rbx
@@ -126,7 +181,7 @@ calcp_next:
 
 percent:    
             inc rbx
-            cmp byte [rdi+rbx*1], '%'   ; check for second '%'
+            cmp byte [rdi+rbx*1], spec  ; check for second '%'
             je calcp_next
             inc rax                     ; increament counter
             cmp rax, 5
@@ -141,10 +196,10 @@ finish:
 section .data
 
 chunksize equ 8
-spec      equ '%'
+spec      equ '%'                   ; specificator symbol
+term      equ 0                     ; termination symbol
 
-Print_buf:  db "Fly with me"
-Funk:       db 4000 dup (0)         ; buffer for printed line
+Print_buf:  db 4000 dup (0)         ; buffer for printed line
 
 section .rodata                     ; read only data
 
