@@ -1,6 +1,6 @@
 CC := gcc
 
-I_FLAG 	:=
+I_FLAG 	:= 
 L_FLAGS := -no-pie
 C_FLAGS := #-Wno-format -g #-fsanitize=address
 
@@ -12,9 +12,13 @@ TEST_OBJ := test.o
 ASM_SRC  := printf.s
 ASM_OBJ  := printf.o
 
+# all: asm_listing
 # all: link_only_c
 # all: link_only_asm
 all: link
+
+asm_listing:
+	@gcc -S -fverbose-asm -masm=intel test.cpp
 
 link_only_asm: $(ASM_OBJ)
 	@ld -s -o $(TEST_EXE) $(ASM_OBJ) 

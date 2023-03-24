@@ -17,24 +17,46 @@ TimPrint:
             push rbp                ; prologue
             mov rbp, rsp
 
-            ; mov rcx, rax            ; set counter!
+            ; mov rcx, rax          ; set counter!
 
-            mov rbx, 8
-            imul rbx
-            add rsp, rax            ; point rsp to first parameter
+            ; mov rbx, 8            ; jump to the start of parameters in stack
+            ; imul rbx
+            ; add rsp, rax            ; point rsp to first parameter
 
-next_param:                         ; while(rsp!=rbp){pop rax; switch rax}
-            sub rsp, 8            
+            jmp FormBuffer
+end_form_buf:    
 
-            cmp rsp, rbp
-            jne next_param
-            ; loop next_param
-            
-            pop rbp                  
+display_buffer:
+            mov rax, 0x01
+            mov rdi, 1              ; stdout 
+            mov rsi, Print_buf
+            ; mov rdx, MsgLen
+            syscall
+
+            pop rbp                 ; epilogue
             
             push r15
             ret
 ;------------------------------------------------
+
+;------------------------------------------------
+;Function that saves every symbol to Print_buf
+;Entry:     
+;Exit:      rdx = buffer_length
+;Expects:   
+;Destroys:  
+;------------------------------------------------
+FormBuffer:
+
+            mov rdx, 10
+; next_param:                         ; while(rsp!=rbp){pop rax; switch rax}
+;             sub rsp, 8            
+;             cmp rsp, rbp
+;             jne next_param
+
+            jmp end_form_buf
+;------------------------------------------------
+
 
 ;------------------------------------------------
 ; Push remainder of params from registers
@@ -119,7 +141,10 @@ finish:
 section .data
 
 chunksize equ 8
-format:     db "My name id %s, %d"
+spec      equ '%'
+
+Print_buf:  db "Fly with me"
+Funk:       db 4000 dup (0)         ; buffer for printed line
 
 section .rodata                     ; read only data
 

@@ -7,7 +7,9 @@ int main()
     const char * line = "Slim shady";
     int year = 1999;
 
-    TimPrint("My name is %s, its %d%s, its %d%s, its %d%s, its %d", line, year);
+    TimPrint("My name is %s, its %d", line, year);
+    printf("My name is %s, shit %d", line, year);
 
-    // printf("My name id %s, %d%d%d%d%d%d%d%d", line, year, year, year, year, year, year, year, year);
+    // puts("Otoydi!");
+
 }

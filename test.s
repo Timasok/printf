@@ -1,16 +1,18 @@
 	.file	"test.cpp"
+	.intel_syntax noprefix
 # GNU C++17 (Ubuntu 11.3.0-1ubuntu1~22.04) version 11.3.0 (x86_64-linux-gnu)
 #	compiled by GNU C version 11.3.0, GMP version 6.2.1, MPFR version 4.1.0, MPC version 1.2.1, isl version isl-0.24-GMP
 
 # GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
-# options passed: -mtune=generic -march=x86-64 -fasynchronous-unwind-tables -fstack-protector-strong -fstack-clash-protection -fcf-protection
+# options passed: -masm=intel -mtune=generic -march=x86-64 -fasynchronous-unwind-tables -fstack-protector-strong -fstack-clash-protection -fcf-protection
 	.text
 	.section	.rodata
 .LC0:
 	.string	"Slim shady"
-	.align 8
 .LC1:
-	.string	"My name id %s, %d%d%d%d%d%d%d%d"
+	.string	"My name is %s, its %d"
+.LC2:
+	.string	"Otoydi!"
 	.text
 	.globl	main
 	.type	main, @function
@@ -18,41 +20,31 @@ main:
 .LFB0:
 	.cfi_startproc
 	endbr64	
-	pushq	%rbp	#
+	push	rbp	#
 	.cfi_def_cfa_offset 16
 	.cfi_offset 6, -16
-	movq	%rsp, %rbp	#,
+	mov	rbp, rsp	#,
 	.cfi_def_cfa_register 6
-	subq	$16, %rsp	#,
+	sub	rsp, 16	#,
 # test.cpp:7:     const char * line = "Slim shady";
-	leaq	.LC0(%rip), %rax	#, tmp84
-	movq	%rax, -8(%rbp)	# tmp84, line
+	lea	rax, .LC0[rip]	# tmp84,
+	mov	QWORD PTR -8[rbp], rax	# line, tmp84
 # test.cpp:8:     int year = 1999;
-	movl	$1999, -12(%rbp)	#, year
-# test.cpp:10:     printf("My name id %s, %d%d%d%d%d%d%d%d", line, year, year, year, year, year, year, year, year);
-	movl	-12(%rbp), %r8d	# year, tmp85
-	movl	-12(%rbp), %edi	# year, tmp86
-	movl	-12(%rbp), %ecx	# year, tmp87
-	movl	-12(%rbp), %edx	# year, tmp88
-	movq	-8(%rbp), %rax	# line, tmp89
-	movl	-12(%rbp), %esi	# year, tmp90
-	pushq	%rsi	# tmp90
-	movl	-12(%rbp), %esi	# year, tmp91
-	pushq	%rsi	# tmp91
-	movl	-12(%rbp), %esi	# year, tmp92
-	pushq	%rsi	# tmp92
-	movl	-12(%rbp), %esi	# year, tmp93
-	pushq	%rsi	# tmp93
-	movl	%r8d, %r9d	# tmp85,
-	movl	%edi, %r8d	# tmp86,
-	movq	%rax, %rsi	# tmp89,
-	leaq	.LC1(%rip), %rax	#, tmp94
-	movq	%rax, %rdi	# tmp94,
-	movl	$0, %eax	#,
+	mov	DWORD PTR -12[rbp], 1999	# year,
+# test.cpp:11:     printf("My name is %s, its %d", line, year);
+	mov	edx, DWORD PTR -12[rbp]	# tmp85, year
+	mov	rax, QWORD PTR -8[rbp]	# tmp86, line
+	mov	rsi, rax	#, tmp86
+	lea	rax, .LC1[rip]	# tmp87,
+	mov	rdi, rax	#, tmp87
+	mov	eax, 0	#,
 	call	printf@PLT	#
-	addq	$32, %rsp	#,
-# test.cpp:11: }
-	movl	$0, %eax	#, _5
+# test.cpp:13:     puts("Otoydi!");
+	lea	rax, .LC2[rip]	# tmp88,
+	mov	rdi, rax	#, tmp88
+	call	puts@PLT	#
+# test.cpp:15: }
+	mov	eax, 0	# _6,
 	leave	
 	.cfi_def_cfa 7, 8
 	ret	
