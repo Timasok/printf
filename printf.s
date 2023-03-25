@@ -21,10 +21,6 @@ TimPrint:
             mov r14, rax            ; set number of total 
             mov rcx, 0              ; set number of used arguments
 
-            ; mov r8, 8               ; jump to the start of parameters in stack
-            ; imul r8
-            ; add rsp, rax            ; point rsp to first parameter
-
             jmp FormBuffer           ;returns rsi = Print_buf; rdx = buffer_length
 end_form_buf:    
 
@@ -35,6 +31,11 @@ display_buffer:
             syscall
 
             pop rbp                 ; epilogue
+
+            mov rax, r14
+            mov r8, 8               ; jump to the start of parameters in stack
+            imul r8
+            add rsp, rax            ; point rsp to first parameter
             
             push r15
             ret
@@ -432,16 +433,15 @@ str_finish:
 ;------------------------------------------------
 
 ;------------------------------------------------
-Hex:
-                                             ; fish argument
+Hex:                                          ; fish argument
 ;================================================
             inc rcx                         ; inc current
             mov rax, rcx                    ; save current
 hex_stk:   
             add rsp, 8
             loop hex_stk
-            mov rcx, rax                    ; revive current
-            mov rax, [rsp]                   ; save argument in rax
+            mov rcx, rax                      ; revive current
+            mov rax, [rsp]                    ; save argument in rax
             mov rsp, rbp
 ;================================================
 
