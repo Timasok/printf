@@ -1,3 +1,4 @@
+; %include "switch.s"
 section .text
 ; global _start
 ; _start:     
@@ -5,7 +6,6 @@ section .text
 ;             mov rax, 0x3C      ; exit64 (rdi)
 ;             xor rdi, rdi
 ;             syscall
-
 global TimPrint
 ;------------------------------------------------
 TimPrint:   
@@ -17,20 +17,20 @@ TimPrint:
             push rbp                ; prologue
             mov rbp, rsp
 
-            mov rcx, rax          ; set counter!
+            xor rdx, rdx            ; rdx = 0
+            mov rcx, rax            ; set counter!
 
-            ; mov rbx, 8            ; jump to the start of parameters in stack
-            ; imul rbx
-            ; add rsp, rax            ; point rsp to first parameter
+            mov r8, 8               ; jump to the start of parameters in stack
+            imul r8
+            add rsp, rax            ; point rsp to first parameter
 
-            jmp FormBuffer
+            jmp FormBuffer           ;returns rsi = Print_buf; rdx = buffer_length
 end_form_buf:    
 
 display_buffer:
             mov rax, 0x01
             mov rdi, 1              ; stdout 
-            mov rsi, Print_buf
-            ; sub rdx, Print_buf-rsi  ; rdx = buffer_length
+
             syscall
 
             pop rbp                 ; epilogue
@@ -101,16 +101,33 @@ SendSymbol:
 ;------------------------------------------------
 
 ;------------------------------------------------
-;Handles % logic
+;Sends byte from al to Print_buf
 ;------------------------------------------------
-HandleSpec:
-            mov byte al, [rdi+rbx]          ; get from format
-            inc rbx
-
+DispSymbol:
             mov byte [rsi+rdx], al          ; send to buffer
             inc rdx
 
             jmp next
+;------------------------------------------------
+
+;------------------------------------------------
+;Handles % logic
+;------------------------------------------------
+HandleSpec:
+            inc rbx
+            
+            ; cmp byte [rdi+rbx*1], term     ;error wrong format
+            ; je Error
+
+            cmp byte [rdi+rbx*1], spec
+            je disp_percent
+
+            jmp SwitchArg                   ; handle argument
+
+disp_percent:
+            mov al, spec
+            inc rbx
+            jmp DispSymbol
 ;------------------------------------------------
 
 ;------------------------------------------------
@@ -199,7 +216,7 @@ chunksize equ 8
 spec      equ '%'                   ; specificator symbol
 term      equ 0                     ; termination symbol
 
-Print_buf:  db 4000 dup (0)         ; buffer for printed line
+Print_buf:  db 1000 dup (0)         ; buffer for printed line
 
 section .rodata                     ; read only data
 
@@ -210,3 +227,155 @@ dq          two_params
 dq          three_params
 dq          four_params
 dq          five_params
+
+section .text
+
+;------------------------------------------------
+;This function handles following %-s:
+; %b - binary
+; %d - decimal
+; %o - ox
+; %x - hex
+; %c - char
+; %s - string
+;Entry:     
+;Exit:      rdx = buffer_length
+;Expects:   
+;Destroys:  
+;------------------------------------------------
+SwitchArg:
+
+            ; cmp rsp, rbp
+            ; je error! : too many arguments!
+
+            mov byte al, [rdi + rbx] 
+            jmp [jmp_tab_formats + rax*8]
+
+            ; inc rbx
+            ; jmp next
+
+;------------------------------------------------
+
+;------------------------------------------------
+Decimal:
+            mov rax, [rsp]                   ; save argument in rax
+            dec rcx
+                                            ; prologue
+;================================================
+dec_stk_prev:   
+            sub rsp, 8
+            cmp rsp, rbp
+            jne dec_stk_prev
+;================================================
+
+            mov r8, 0FFFFh
+            push r8
+            mov r8, rdx                 ; r8 = rdx
+
+            mov r9, 10d             ; add value that we are going to delete
+
+dec_first:  cmp rax, 0
+            je dec_end_first
+
+            xor rdx, rdx
+            div r9
+
+            push rdx
+
+            jmp dec_first
+
+dec_end_first:
+dec_second:
+            pop rax
+
+            cmp rax, 0FFFFh          ; check if poison
+            je dec_end_second
+
+            add rax, '0'
+            mov byte [rsi+r8], al   ; send to buffer
+            inc r8
+
+            jmp dec_second
+dec_end_second:
+
+            mov rdx, r8             ; revive rdx   
+                                            ; epilogue
+;================================================
+            cmp rcx, 0
+            je dec_finish
+            mov rax, rcx
+dec_stk_next:   
+            add rsp, 8
+            cmp rsp, rbp
+            loop dec_stk_next
+            mov rcx, rax
+dec_finish:
+;================================================
+
+            inc rbx
+            jmp next
+;------------------------------------------------
+
+;------------------------------------------------
+Binary:
+;------------------------------------------------
+
+;------------------------------------------------
+Octal:
+;------------------------------------------------
+
+;------------------------------------------------
+String:
+;------------------------------------------------
+
+;------------------------------------------------
+Hex:
+;------------------------------------------------
+
+;------------------------------------------------
+Char:
+;------------------------------------------------
+
+; ;------------------------------------------------
+; ReviveStack:
+
+; stk_prev:       sub rsp, 8
+;                 cmp rsp, rbp
+;                 jne stk_prev
+
+; ;------------------------------------------------
+
+; ;------------------------------------------------
+; KillStack:
+;                 mov rax, rcx
+; stk_next:       add rsp, 8
+;                 cmp rsp, rbp
+;                 loop stk_next
+
+;                 mov rcx, rax
+; ;------------------------------------------------
+
+
+section .data
+
+; bin     equ 'b'
+; char    equ 'c'
+; decimal equ 'd'
+; oct     equ 'o'                     ; termination symbol
+; string  equ 's'
+; hex     equ 'x'                     ; specificator symbol
+
+section .rodata                     ; read only data
+
+jmp_tab_formats:
+
+times       98 dq 0                 ; (ascii code of b) * 8
+dq          Binary
+dq          Char
+dq          Decimal
+times       11 dq 0                 ; ('o' - 'd') * 8
+dq          Octal
+times       4  dq 0                 ; ('s' - 'o') * 8
+dq          String
+times       5  dq 0                 ; ('x' - 's') * 8
+dq          Hex
