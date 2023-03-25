@@ -4,12 +4,14 @@ extern "C" void TimPrint(const char* template_string, ...);
 
 int main()
 {
-    const char * line = "Slim shady";
-    int year = 1999;
+    const char * line = "Amerika";
+    int year1 = 1999;
+    int year2 = 1989;
+    char ch = 'R';
 
-    // TimPrint("My name is %s, its %d", line, year);
-    TimPrint("Its %d", year);
-    // puts("\n");
+    TimPrint("Goodbye %s oh!", line);
+    TimPrint("Its %d %o %c %b %x", year1, year2, ch, 47, 12);
+    puts("\n");
 
     // printf("My name is %s, shit %d", line, year);
 

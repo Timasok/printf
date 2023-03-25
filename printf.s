@@ -18,11 +18,12 @@ TimPrint:
             mov rbp, rsp
 
             xor rdx, rdx            ; rdx = 0
-            mov rcx, rax            ; set counter!
+            mov r14, rax            ; set number of total 
+            mov rcx, 0              ; set number of used arguments
 
-            mov r8, 8               ; jump to the start of parameters in stack
-            imul r8
-            add rsp, rax            ; point rsp to first parameter
+            ; mov r8, 8               ; jump to the start of parameters in stack
+            ; imul r8
+            ; add rsp, rax            ; point rsp to first parameter
 
             jmp FormBuffer           ;returns rsi = Print_buf; rdx = buffer_length
 end_form_buf:    
@@ -247,7 +248,7 @@ SwitchArg:
 
             ; cmp rsp, rbp
             ; je error! : too many arguments!
-
+            xor rax, rax
             mov byte al, [rdi + rbx] 
             jmp [jmp_tab_formats + rax*8]
 
@@ -258,14 +259,16 @@ SwitchArg:
 
 ;------------------------------------------------
 Decimal:
-            mov rax, [rsp]                   ; save argument in rax
-            dec rcx
-                                            ; prologue
+                                             ; fish argument
 ;================================================
-dec_stk_prev:   
-            sub rsp, 8
-            cmp rsp, rbp
-            jne dec_stk_prev
+            inc rcx                         ; inc current
+            mov rax, rcx                    ; save current
+dec_stk:   
+            add rsp, 8
+            loop dec_stk
+            mov rcx, rax                    ; revive current
+            mov rax, [rsp]                   ; save argument in rax
+            mov rsp, rbp
 ;================================================
 
             mov r8, 0FFFFh
@@ -299,18 +302,6 @@ dec_second:
 dec_end_second:
 
             mov rdx, r8             ; revive rdx   
-                                            ; epilogue
-;================================================
-            cmp rcx, 0
-            je dec_finish
-            mov rax, rcx
-dec_stk_next:   
-            add rsp, 8
-            cmp rsp, rbp
-            loop dec_stk_next
-            mov rcx, rax
-dec_finish:
-;================================================
 
             inc rbx
             jmp next
@@ -318,52 +309,212 @@ dec_finish:
 
 ;------------------------------------------------
 Binary:
+                                             ; fish argument
+;================================================
+            inc rcx                         ; inc current
+            mov rax, rcx                    ; save current
+bin_stk:   
+            add rsp, 8
+            loop bin_stk
+            mov rcx, rax                    ; revive current
+            mov rax, [rsp]                   ; save argument in rax
+            mov rsp, rbp
+;================================================
+
+            mov r8, rcx
+            mov rcx, 15
+
+bin_next:   
+            push rax
+            shr rax, cl
+            and ax, 0001h
+            add ax, 0030h
+
+            mov byte [rsi+rdx], al   ; send to buffer
+            inc rdx
+
+            pop rax
+            loop bin_next
+
+            and ax, 0001h
+            add ax, 0030h
+
+            mov byte [rsi+rdx], al   ; send to buffer
+            inc rdx
+
+            mov rcx, r8                    ; revive current
+
+            inc rbx
+            jmp next
 ;------------------------------------------------
 
 ;------------------------------------------------
 Octal:
+                                             ; fish argument
+;================================================
+            inc rcx                         ; inc current
+            mov rax, rcx                    ; save current
+oct_stk:   
+            add rsp, 8
+            loop oct_stk
+            mov rcx, rax                    ; revive current
+            mov rax, [rsp]                   ; save argument in rax
+            mov rsp, rbp
+;================================================
+
+            mov r8, 0FFFFh
+            push r8
+            mov r8, rdx                 ; r8 = rdx
+
+            mov r9, 8d             ; add value that we are going to delete
+
+oct_first:  cmp rax, 0
+            je oct_end_first
+
+            xor rdx, rdx
+            div r9
+
+            push rdx
+
+            jmp oct_first
+
+oct_end_first:
+oct_second:
+            pop rax
+
+            cmp rax, 0FFFFh          ; check if poison
+            je oct_end_second
+
+            add rax, '0'
+            mov byte [rsi+r8], al   ; send to buffer
+            inc r8
+
+            jmp oct_second
+oct_end_second:
+
+            mov rdx, r8             ; revive rdx   
+
+            inc rbx
+            jmp next
 ;------------------------------------------------
 
 ;------------------------------------------------
 String:
+                                             ; fish argument
+;================================================
+            inc rcx                         ; inc current
+            mov rax, rcx                    ; save current
+str_stk:   
+            add rsp, 8
+            loop str_stk
+            mov rcx, rax                    ; revive current
+            mov r9, [rsp]                   ; save argument in rax
+            mov rsp, rbp
+;================================================ 
+
+            xor r8, r8
+            xor rax, rax
+str_next:
+            mov byte al,[r9+r8]          ; get from format
+            inc r8
+
+            cmp byte al, term
+            je str_finish
+
+            mov byte [rsi+rdx], al         ; send to buffer
+            inc rdx
+
+            jmp str_next
+str_finish:
+
+            inc rbx
+            jmp next
 ;------------------------------------------------
 
 ;------------------------------------------------
 Hex:
+                                             ; fish argument
+;================================================
+            inc rcx                         ; inc current
+            mov rax, rcx                    ; save current
+hex_stk:   
+            add rsp, 8
+            loop hex_stk
+            mov rcx, rax                    ; revive current
+            mov rax, [rsp]                   ; save argument in rax
+            mov rsp, rbp
+;================================================
+
+            mov r9, rdx
+            mov r8, rcx
+
+            mov rcx, 4
+
+hex_next:   
+            push rcx
+            sub rcx, 1
+
+            push rax
+            mov rdx, rax
+
+            mov rax, 4
+            mul rcx
+            mov rcx, rax
+
+            pop rdx
+            push rdx
+
+            shr rdx, cl
+            and dx, 000Fh
+
+            cmp dx, 000ah
+            jb hex_digit
+            jmp hex_symbol
+
+hex_digit:  add rdx, 48d
+            jmp hex_finish
+hex_symbol:
+            add rdx, 55d
+            jmp hex_finish
+
+hex_finish:   
+            xor rax, rax
+            add rax, rdx                           
+;===
+            mov byte [rsi+r9], al   ; send to buffer
+            inc r9
+
+            pop rax
+            pop rcx
+            loop hex_next
+
+            mov rcx, r8                    ; revive current
+            mov rdx, r9
+
+            inc rbx
+            jmp next
 ;------------------------------------------------
 
 ;------------------------------------------------
 Char:
+                                             ; fish argument
+;================================================
+            inc rcx                         ; inc current
+            mov rax, rcx                    ; save current
+chr_stk:   
+            add rsp, 8
+            loop chr_stk
+            mov rcx, rax                    ; revive current
+            mov rax, [rsp]                   ; save argument in rax
+            mov rsp, rbp
+;================================================
+
+            mov byte [rsi+rdx], al   ; send to buffer
+            inc rdx
+
+            inc rbx
+            jmp next
 ;------------------------------------------------
-
-; ;------------------------------------------------
-; ReviveStack:
-
-; stk_prev:       sub rsp, 8
-;                 cmp rsp, rbp
-;                 jne stk_prev
-
-; ;------------------------------------------------
-
-; ;------------------------------------------------
-; KillStack:
-;                 mov rax, rcx
-; stk_next:       add rsp, 8
-;                 cmp rsp, rbp
-;                 loop stk_next
-
-;                 mov rcx, rax
-; ;------------------------------------------------
-
-
-section .data
-
-; bin     equ 'b'
-; char    equ 'c'
-; decimal equ 'd'
-; oct     equ 'o'                     ; termination symbol
-; string  equ 's'
-; hex     equ 'x'                     ; specificator symbol
 
 section .rodata                     ; read only data
 
@@ -373,9 +524,9 @@ times       98 dq 0                 ; (ascii code of b) * 8
 dq          Binary
 dq          Char
 dq          Decimal
-times       11 dq 0                 ; ('o' - 'd') * 8
+times       10 dq 0                 ; ('o' - 'd') * 8
 dq          Octal
-times       4  dq 0                 ; ('s' - 'o') * 8
+times       3  dq 0                 ; ('s' - 'o') * 8
 dq          String
-times       5  dq 0                 ; ('x' - 's') * 8
+times       4  dq 0                 ; ('x' - 's') * 8
 dq          Hex
