@@ -1,11 +1,11 @@
-Octal:
+Hex:
                                              ; fish argument
 ;================================================
             inc rcx                         ; inc current
             mov rax, rcx                    ; save current
-oct_stk:   
+hex_stk:   
             add rsp, 8
-            loop oct_stk
+            loop hex_stk
             mov rcx, rax                    ; revive current
             mov rax, [rsp]                   ; save argument in rax
             mov rsp, rbp
@@ -15,31 +15,41 @@ oct_stk:
             push r8
             mov r8, rdx                 ; r8 = rdx
 
-            mov r9, 10d             ; add value that we are going to delete
+            mov r9, 16d             ; add value that we are going to delete
 
-oct_first:  cmp rax, 0
-            je oct_end_first
+hex_first:  cmp rax, 0
+            je hex_end_first
 
             xor rdx, rdx
             div r9
 
             push rdx
 
-            jmp oct_first
+            jmp hex_first
 
-oct_end_first:
-oct_second:
+hex_end_first:
+hex_second:
             pop rax
 
             cmp rax, 0FFFFh          ; check if poison
-            je oct_end_second
+            je hex_end_second
 
-            add rax, '0'
+            cmp rax, 000ah
+            jb hex_digit
+            jmp hex_symbol
+
+hex_digit:  add rax, 48d
+            jmp hex_print
+hex_symbol:
+            add rax, 55d
+            jmp hex_print
+
+hex_print:   
             mov byte [rsi+r8], al   ; send to buffer
             inc r8
 
-            jmp oct_second
-oct_end_second:
+            jmp hex_second
+hex_end_second:
 
             mov rdx, r8             ; revive rdx   
 

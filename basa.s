@@ -1,31 +1,60 @@
-String:
-                                             ; fish argument
+Hex:                                          ; fish argument
 ;================================================
             inc rcx                         ; inc current
             mov rax, rcx                    ; save current
-str_stk:   
+hex_stk:   
             add rsp, 8
-            loop str_stk
-            mov rcx, rax                    ; revive current
-            mov r9, [rsp]                   ; save argument in rax
+            loop hex_stk
+            mov rcx, rax                      ; revive current
+            mov rax, [rsp]                    ; save argument in rax
             mov rsp, rbp
-;================================================ 
+;================================================
 
-            xor r8, r8
+            mov r9, rdx
+            mov r8, rcx
+
+            mov rcx, 4
+
+hex_next:   
+            push rcx
+            sub rcx, 1
+
+            push rax
+            mov rdx, rax
+
+            mov rax, 4
+            mul rcx
+            mov rcx, rax
+
+            pop rdx
+            push rdx
+
+            shr rdx, cl
+            and dx, 000Fh
+
+            cmp dx, 000ah
+            jb hex_digit
+            jmp hex_symbol
+
+hex_digit:  add rdx, 48d
+            jmp hex_finish
+hex_symbol:
+            add rdx, 55d
+            jmp hex_finish
+
+hex_finish:   
             xor rax, rax
-str_next:
-            mov byte al,[r9+r8]          ; get from format
-            inc r8
+            add rax, rdx                           
+;===
+            mov byte [rsi+r9], al   ; send to buffer
+            inc r9
 
-            cmp byte al, term
-            je str_finish
+            pop rax
+            pop rcx
+            loop hex_next
 
-            mov byte [rsi+rdx], al         ; send to buffer
-            inc rdx
-
-            jmp str_next
-str_finish:
+            mov rcx, r8                    ; revive current
+            mov rdx, r9
 
             inc rbx
             jmp next
-;------------------------------------------------

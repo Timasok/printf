@@ -432,64 +432,61 @@ str_finish:
             jmp next
 ;------------------------------------------------
 
-;------------------------------------------------
-Hex:                                          ; fish argument
+
+Hex:
+                                             ; fish argument
 ;================================================
             inc rcx                         ; inc current
             mov rax, rcx                    ; save current
 hex_stk:   
             add rsp, 8
             loop hex_stk
-            mov rcx, rax                      ; revive current
-            mov rax, [rsp]                    ; save argument in rax
+            mov rcx, rax                    ; revive current
+            mov rax, [rsp]                   ; save argument in rax
             mov rsp, rbp
 ;================================================
 
-            mov r9, rdx
-            mov r8, rcx
+            mov r8, 0FFFFh
+            push r8
+            mov r8, rdx                 ; r8 = rdx
 
-            mov rcx, 4
+            mov r9, 16d             ; add value that we are going to delete
 
-hex_next:   
-            push rcx
-            sub rcx, 1
+hex_first:  cmp rax, 0
+            je hex_end_first
 
-            push rax
-            mov rdx, rax
+            xor rdx, rdx
+            div r9
 
-            mov rax, 4
-            mul rcx
-            mov rcx, rax
-
-            pop rdx
             push rdx
 
-            shr rdx, cl
-            and dx, 000Fh
+            jmp hex_first
 
-            cmp dx, 000ah
+hex_end_first:
+hex_second:
+            pop rax
+
+            cmp rax, 0FFFFh          ; check if poison
+            je hex_end_second
+
+            cmp rax, 000ah
             jb hex_digit
             jmp hex_symbol
 
-hex_digit:  add rdx, 48d
-            jmp hex_finish
+hex_digit:  add rax, 48d
+            jmp hex_print
 hex_symbol:
-            add rdx, 55d
-            jmp hex_finish
+            add rax, 55d
+            jmp hex_print
 
-hex_finish:   
-            xor rax, rax
-            add rax, rdx                           
-;===
-            mov byte [rsi+r9], al   ; send to buffer
-            inc r9
+hex_print:   
+            mov byte [rsi+r8], al   ; send to buffer
+            inc r8
 
-            pop rax
-            pop rcx
-            loop hex_next
+            jmp hex_second
+hex_end_second:
 
-            mov rcx, r8                    ; revive current
-            mov rdx, r9
+            mov rdx, r8             ; revive rdx   
 
             inc rbx
             jmp next
